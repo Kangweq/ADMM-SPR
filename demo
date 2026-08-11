@@ -82,7 +82,7 @@ for k_iter = 1:kl
             % if rx8 < tol
             %     success_count_L12LADAR = success_count_L12LADAR + 1;
             % end  
-            [x7,rx7] = L1overL2sel1(b,A,s,iter,tol,z,0,x_init,0.1,0.1,0.0005,1.05,0.01);
+            [x7,rx7] = L1overL2(b,A,s,iter,tol,z,0,x_init,0.1,0.1,0.0005,1.05,0.01);
             if rx7 < tol  %添加截断效果不好
                 success_count_L1overL2 = success_count_L1overL2 + 1;
             end
