@@ -1,0 +1,50 @@
+function [x,rx] = L1overL2(b,A,s,max_iter,tol1,zz,cplx_flag,x_init,r1,r2,r3,rho,lambda)
+%% initialize parameters
+[m,n] = size(A);
+%% start descent
+x = x_init;  
+p=A*x;y=x;z=x;
+U=zeros(n,1);V=zeros(n,1);W=zeros(m,1);
+for kk=1:max_iter 
+    % x-subproblem
+    x1=(r1*y+r2*z+r3*A'*(p-W/r3)-U-V);
+    x11=((r1+r2)*eye(n)+r3*(A'*A));
+    [x, ~, ~, ~]=cgs(x11,x1,1e-6,40);
+
+    % y-subproblem
+    dk=x+U/r1;
+    Dk=(lambda*norm(z,1))/(r1*(norm(dk))^3);
+    Ck=((27*Dk+2+((27*Dk+2)^2-4)^(1/2))/2)^(1/3);
+    tau=1/3+1/3*(Ck+1/Ck);
+    y=real(tau*dk);
+    %p-subproblem
+    WW=A*x+W/r3;
+    KK=max(0,(b+r3*abs(WW))./((1+r3)*abs(WW)));
+    p=KK.*WW;
+    %z-subproblem   
+    aa=lambda/(norm(y)*r2);
+    bb=x+V/r2;
+    z=sign(bb).*max(0,abs(bb)-aa);
+    [~,zindex] = sort(abs(z),'descend');  %仅仅对于噪声测量加上。
+    z(zindex(s+1:end))=0;
+    % Update multipliers
+    U=U+r1*(x-y);
+    V=V+r2*(x-z);
+    W=W+r3*(A*x-p);
+    if cplx_flag==0
+        rx=min(norm(z-zz),norm(z+zz));
+    else 
+        rx=norm(zz-exp(-1i*angle(trace(zz'*x)))*x, 'fro')/norm(zz,'fro');
+    end
+    rx1(kk,1)=rx;
+    %err_hist(kk,1) = log(dist/norm(z));
+    if rx<tol1
+        break
+    end
+    r1=rho*r1;
+    r2=rho*r2;
+    r3=rho*r3;
+
+end
+rx=min(norm(z-zz),norm(z+zz));
+end
