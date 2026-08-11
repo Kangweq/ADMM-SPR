@@ -1,0 +1,134 @@
+%addpath('utils','SPARTA','CoPRAM','CRAF','HTP','SWF','ThWF','chang-L0','CPRL12')
+close all;
+clc;
+clear all;
+rng(0)
+%% signal model
+n = 1000; %signal length 
+s=20;%30;
+%% measurement params
+mspan = 100:100:1200; %varying measurement dimensions
+kl = length(mspan);     
+num_trials = 100; % Number of independent trials
+ %% initialize paramters 
+iter = 200; %maximum iterations for all algorithms 之前可能用的100次
+tol = 1e-3; %error tolerance 
+npower_iter   = 100;
+%% Initialize success rate arrays
+% success_rates_SPAR = zeros(length(kl), 1);
+% success_rates_HTP = zeros(length(kl), 1);
+% success_rates_COM = zeros(length(kl), 1);
+success_rates_L1overL2 = zeros(length(kl), 1);
+% success_rates_L0L2PR = zeros(length(kl), 1);
+% success_rates_SWF = zeros(length(kl), 1);
+% success_rates_CRAF = zeros(length(kl), 1);
+% success_rates_L12LADAR = zeros(length(kl), 1);
+
+Params.n2            = 1;      Params.gamma_lb          =1;
+Params.n1            = n;      Params.cplx_flag         =0;
+Params.npower_iter   = 100;    Params.mu                =1;
+Params.nonK          = n-s;    Params.tol               =tol;         
+Params.T             =iter;    
+
+
+for k_iter = 1:kl
+    m=mspan(k_iter);   % measurement number
+    % success_count_SPAR = 0;  % Count successful trials for SPARTA
+    % success_count_HTP = 0;  % Count successful trials for HTP
+    % success_count_COM = 0;  % Count successful trials for CoPRAM
+    success_count_L1overL2 = 0;  % Count successful trials for Algorithm I
+    % success_count_L0L2PR = 0;  % Count successful trials for Algorithm II
+    % success_count_L12LADAR = 0;
+    % success_count_SWF = 0;
+    % success_count_CRAF = 0;
+    Params.m             =m;
+        for tr = 1:num_trials
+            [z, z_ind] = generate_signal(n, s);
+            [b, A] = measure_signal(m, z, 0);
+            b_twf = b.^2;
+            x_init = initialize1(b,A,s);
+            x_initSPAR=initialize_SPAR1D(b_twf,Params,A);
+            x_init1 = CRAF_init1(b,A,s);
+            % Algorithms
+
+            % [x1,rx1] =SPARTA1D1(b_twf, z, Params, A,x_initSPAR); 
+            % if rx1 < tol
+            %     success_count_SPAR = success_count_SPAR + 1;
+            % end
+            % 
+            % [x2,rx2] = HTP(b,A,s,iter,tol,z,x_init); 
+            % if rx2 < tol
+            %     success_count_HTP = success_count_HTP + 1;
+            % end 
+            % [x3,rx3] = CoPRAM(b,A,s,iter,tol,z,x_init); 
+            % if rx3 < tol
+            %     success_count_COM = success_count_COM + 1;
+            % end 
+            %  chang_L0 
+            % [x4,rx4] =chang_L00(b,A,s,iter,tol,z,x_init); 
+            % if rx4 < tol
+            %     success_count_L0L2PR = success_count_L0L2PR + 1;
+            % end 
+            
+            % [x5,rx5] =SWF(b_twf,A,s,iter,tol,z,x_init); 
+            % if rx5 < tol
+            %     success_count_SWF = success_count_SWF + 1;
+            % end 
+            % [x6,rx6] =CRAF(b,A,s,iter,tol,z,x_init1);  %x_initSPAR
+            % if rx6 < tol
+            %     success_count_CRAF = success_count_CRAF + 1;
+            % end
+            % [x8,rx8] =CPRL12r1r2(b,A,s,iter,tol,z,x_init,1e-1,1e-3,1e-3,1.05);
+            % if rx8 < tol
+            %     success_count_L12LADAR = success_count_L12LADAR + 1;
+            % end  
+            [x7,rx7] = L1overL2sel1(b,A,s,iter,tol,z,0,x_init,0.1,0.1,0.0005,1.05,0.01);
+            if rx7 < tol  %添加截断效果不好
+                success_count_L1overL2 = success_count_L1overL2 + 1;
+            end
+        end
+        % Compute success rates for current n/d   
+        % success_rates_SPAR(k_iter) = success_count_SPAR / num_trials;
+        % success_rates_HTP(k_iter) = success_count_HTP / num_trials;
+        % success_rates_COM(k_iter) = success_count_COM / num_trials;
+        % success_rates_SWF(k_iter) = success_count_SWF / num_trials;
+        % success_rates_CRAF(k_iter) = success_count_CRAF / num_trials;
+        success_rates_L1overL2(k_iter) = success_count_L1overL2 / num_trials;
+        % success_rates_L12LADAR(k_iter) = success_count_L12LADAR / num_trials;
+        % success_rates_L0L2PR(k_iter) = success_count_L0L2PR / num_trials;
+end  
+% 绘制图表
+figure;
+hold on;
+colors = lines(8); % 使用不同颜色
+markers = {'s','+' , '^', 'd', 'p','*','o','x'}; % 不同标记：方块、圆形、三角形、菱形
+% plot(mspan, success_rates_SPAR, 'LineWidth', 3, 'Color', colors(1, :), ...
+%          'Marker', markers{1}, 'MarkerSize', 7, 'DisplayName', 'SPARTA');
+% plot(mspan, success_rates_HTP, 'LineWidth', 3, 'Color', colors(2, :), ...
+%          'Marker', markers{2}, 'MarkerSize', 7, 'DisplayName', 'HTP');
+% plot(mspan, success_rates_COM, 'LineWidth', 3, 'Color', colors(3, :), ...
+%          'Marker', markers{3}, 'MarkerSize', 7, 'DisplayName', 'CoPRAM');
+% plot(mspan, success_rates_L0L2PR, 'LineWidth', 3, 'Color', colors(4, :), ...
+%          'Marker', markers{4}, 'MarkerSize', 7, 'DisplayName', 'L0L2PR');
+% plot(mspan, success_rates_SWF, 'LineWidth', 3, 'Color', colors(5, :), ...
+%          'Marker', markers{5}, 'MarkerSize', 7, 'MarkerFaceColor', colors(5, :), ...
+%          'DisplayName', 'SWF');
+% plot(mspan, success_rates_CRAF, 'LineWidth', 3, 'Color', colors(6, :), ...
+%          'Marker', markers{6}, 'MarkerSize', 7, 'DisplayName', 'CRAF');
+plot(mspan, success_rates_L1overL2, 'LineWidth', 3, 'Color', colors(7, :), ...
+         'Marker', markers{7}, 'MarkerSize', 7, 'MarkerFaceColor', colors(7, :), ...
+         'DisplayName', 'L_1/L_2-SPR');
+% plot(mspan, success_rates_L12LADAR, 'LineWidth', 3, 'Color', colors(8, :), ...
+%          'Marker', markers{8}, 'MarkerSize', 7, 'MarkerFaceColor', colors(8, :), ...
+%          'DisplayName', 'L_{1/2}LADAR');
+hold off;
+axis([mspan(1) mspan(end) 0 1]);
+%axis([400 2000 0 1]);
+box on;
+% 图表美化
+xlabel('no. of measurements (m)');
+ylabel('probability of success');
+title(['Phase Transition: n=', num2str(n), ', s=', num2str(s)]);%title('Phase Transition: n=d%, s=d%',n,s);
+legend('show');
+grid on;
+set(gca, 'FontSize', 12); % 设置字体大小
